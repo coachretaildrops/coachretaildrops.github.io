@@ -2066,10 +2066,67 @@
       "https://script.google.com/macros/s/AKfycbwgLeNsrDDVXQeafRck5RYhcnpTopXRTFXzcBJ6a0pa1bLRJ50Ub7dUL0uy5fECwyijsw/exec";
 
 
+    /* =========================
+       BROWSER CACHE
+       ========================= */
+
+    const apiCache = new Map();
+
+    const apiRequestsInProgress = new Map();
+
+
+    /* =========================
+       API REQUEST
+       ========================= */
+
     async function apiRequest(
       action,
       sheetName
     ) {
+
+      const cacheKey =
+        action +
+        "::" +
+        String(
+          sheetName || ""
+        );
+
+
+      /*
+       * Return data already loaded
+       * during this page session.
+       */
+
+      if (
+        apiCache.has(cacheKey)
+      ) {
+
+        return apiCache.get(
+          cacheKey
+        );
+
+      }
+
+
+      /*
+       * If the exact same request is
+       * already running, wait for it
+       * instead of sending another
+       * request to Google.
+       */
+
+      if (
+        apiRequestsInProgress.has(
+          cacheKey
+        )
+      ) {
+
+        return apiRequestsInProgress.get(
+          cacheKey
+        );
+
+      }
+
 
       let url =
         API_URL +
@@ -2086,21 +2143,68 @@
       }
 
 
-      const response =
-        await fetch(url);
+      const request =
+        fetch(
+          url,
+          {
+            cache: "no-store"
+          }
+        )
+
+          .then(
+            function(response) {
+
+              if (!response.ok) {
+
+                throw new Error(
+                  "API request failed: " +
+                  response.status
+                );
+
+              }
+
+              return response.json();
+
+            }
+          )
+
+          .then(
+            function(data) {
+
+              apiCache.set(
+                cacheKey,
+                data
+              );
+
+              apiRequestsInProgress.delete(
+                cacheKey
+              );
+
+              return data;
+
+            }
+          )
+
+          .catch(
+            function(error) {
+
+              apiRequestsInProgress.delete(
+                cacheKey
+              );
+
+              throw error;
+
+            }
+          );
 
 
-      if (!response.ok) {
-
-        throw new Error(
-          "API request failed: " +
-          response.status
-        );
-
-      }
+      apiRequestsInProgress.set(
+        cacheKey,
+        request
+      );
 
 
-      return await response.json();
+      return request;
 
     }
 
@@ -2125,6 +2229,12 @@
       function() {
 
         showHome();
+
+        /*
+         * Load the drop list first.
+         * This is the only data required
+         * to build the calendar.
+         */
 
         loadDropSheets();
 
@@ -2159,7 +2269,16 @@
 
             renderCalendar();
 
-            loadUnreleasedProducts();
+
+            /*
+             * Load unreleased products
+             * after the calendar has already
+             * appeared.
+             */
+
+            requestIdleLoad(
+              loadUnreleasedProducts
+            );
 
           }
         )
@@ -2176,10 +2295,44 @@
 
             renderCalendar();
 
-            loadUnreleasedProducts();
+
+            requestIdleLoad(
+              loadUnreleasedProducts
+            );
 
           }
         );
+
+    }
+
+
+    /* =========================
+       IDLE LOAD
+       ========================= */
+
+    function requestIdleLoad(
+      callback
+    ) {
+
+      if (
+        "requestIdleCallback" in window
+      ) {
+
+        window.requestIdleCallback(
+          callback,
+          {
+            timeout: 1500
+          }
+        );
+
+      } else {
+
+        setTimeout(
+          callback,
+          250
+        );
+
+      }
 
     }
 
@@ -2852,7 +3005,9 @@
         dropSheets.length
       ) {
 
-        loadUnreleasedProducts();
+        requestIdleLoad(
+          loadUnreleasedProducts
+        );
 
       }
 
@@ -3350,6 +3505,12 @@
       `;
 
 
+      /*
+       * If this drop was already viewed,
+       * the browser cache will return it
+       * immediately.
+       */
+
       apiRequest(
         "products",
         sheetName
@@ -3544,6 +3705,7 @@
             src="${escapeAttribute(product.image)}"
             alt="${escapeAttribute(product.bagName || "")}"
             loading="lazy"
+            decoding="async"
           >
 
         `;
@@ -3664,6 +3826,7 @@
 
 
             ${flair}
+
 
           </div>
 
