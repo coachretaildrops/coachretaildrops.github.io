@@ -374,20 +374,20 @@
         22px;
 
       border:
-        1px solid #d2d0c9;
+        1px solid #2c2c29;
 
       border-radius: 16px;
 
-      background: #f7f6f2;
+      background: #1c1c1a;
 
-      color: #171717;
+      color: #ffffff;
 
       text-decoration: none;
 
       text-align: left;
 
       box-shadow:
-        0 8px 24px rgba(0, 0, 0, 0.055);
+        0 8px 24px rgba(0, 0, 0, 0.12);
 
       transition:
         background 0.2s ease,
@@ -397,44 +397,36 @@
     }
 
     .unreleased-hero-link:hover {
-      background: #ffffff;
+      background: #292925;
 
-      border-color: #c5c2ba;
+      border-color: #3b3b37;
 
       transform: translateY(-2px);
 
       box-shadow:
-        0 12px 30px rgba(0, 0, 0, 0.09);
+        0 12px 30px rgba(0, 0, 0, 0.17);
     }
 
     .unreleased-hero-left {
       display: flex;
 
-      flex-direction: column;
-
-      gap: 5px;
+      align-items: center;
 
       min-width: 0;
     }
 
     .unreleased-hero-title {
+      color: #ffffff;
+
       font-size: 11px;
 
       font-weight: 700;
 
       letter-spacing: 1.5px;
 
-      text-transform: uppercase;
-    }
-
-    .unreleased-hero-description {
-      color: #99968f;
-
-      font-size: 9px;
-
-      letter-spacing: 0.3px;
-
       line-height: 1.4;
+
+      text-transform: uppercase;
     }
 
     .unreleased-hero-arrow {
@@ -450,22 +442,19 @@
 
       border-radius: 50%;
 
-      background: #1c1c1a;
+      background: #ffffff;
 
-      color: #ffffff;
+      color: #1c1c1a;
 
       font-size: 14px;
 
       transition:
-        transform 0.2s ease,
-        background 0.2s ease;
+        transform 0.2s ease;
     }
 
     .unreleased-hero-link:hover
     .unreleased-hero-arrow {
       transform: translateX(3px);
-
-      background: #b52828;
     }
 
 
@@ -1969,10 +1958,6 @@
         letter-spacing: 1.2px;
       }
 
-      .unreleased-hero-description {
-        font-size: 8px;
-      }
-
       .calendar-widget {
         padding: 18px;
 
@@ -2264,10 +2249,7 @@
 
       const request =
         fetch(
-          url,
-          {
-            cache: "no-store"
-          }
+          url
         )
 
           .then(
@@ -2890,10 +2872,6 @@
 
                   <span class="unreleased-hero-title">
                     Unreleased / Unconfirmed Items Here
-                  </span>
-
-                  <span class="unreleased-hero-description">
-                    Products without a confirmed retail drop date
                   </span>
 
                 </span>
