@@ -345,6 +345,7 @@
 
     .hero-title span {
       display: block;
+      white-space: nowrap;
     }
 
     .hero-title span:last-child {
@@ -449,12 +450,18 @@
       font-size: 14px;
 
       transition:
-        transform 0.2s ease;
+        transform 0.2s ease,
+        background 0.2s ease,
+        color 0.2s ease;
     }
 
     .unreleased-hero-link:hover
     .unreleased-hero-arrow {
       transform: translateX(3px);
+
+      background: #b52828;
+
+      color: #ffffff;
     }
 
 
