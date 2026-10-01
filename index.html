@@ -1481,7 +1481,7 @@
 
 
     /* =========================
-       STATES
+       LOADING
        ========================= */
 
     .loading {
@@ -1496,6 +1496,46 @@
       letter-spacing: 1.5px;
 
       text-transform: uppercase;
+    }
+
+    .drop-loading {
+      display: grid;
+
+      grid-template-columns:
+        repeat(4, minmax(0, 1fr));
+
+      gap: 26px;
+    }
+
+    .loading-card {
+      min-height: 330px;
+
+      border-radius: 14px;
+
+      background:
+        linear-gradient(
+          90deg,
+          #eeeeeb 25%,
+          #f7f7f4 50%,
+          #eeeeeb 75%
+        );
+
+      background-size: 200% 100%;
+
+      animation:
+        loadingShimmer 1.2s infinite linear;
+    }
+
+    @keyframes loadingShimmer {
+
+      0% {
+        background-position: 200% 0;
+      }
+
+      100% {
+        background-position: -200% 0;
+      }
+
     }
 
     .empty {
@@ -1634,6 +1674,11 @@
       }
 
       .product-grid {
+        grid-template-columns:
+          repeat(3, minmax(0, 1fr));
+      }
+
+      .drop-loading {
         grid-template-columns:
           repeat(3, minmax(0, 1fr));
       }
@@ -1841,6 +1886,17 @@
         gap: 16px;
       }
 
+      .drop-loading {
+        grid-template-columns:
+          repeat(2, minmax(0, 1fr));
+
+        gap: 16px;
+      }
+
+      .loading-card {
+        min-height: 250px;
+      }
+
       .product-card {
         padding: 9px;
 
@@ -2006,6 +2062,15 @@
       .product-grid {
         grid-template-columns:
           repeat(2, minmax(0, 1fr));
+      }
+
+      .drop-loading {
+        grid-template-columns:
+          repeat(2, minmax(0, 1fr));
+      }
+
+      .loading-card {
+        min-height: 210px;
       }
 
       .product-card {
@@ -2318,6 +2383,186 @@
 
 
     /* =========================
+       PREFETCH PRODUCTS
+       ========================= */
+
+    function prefetchDrop(
+      sheetName
+    ) {
+
+      if (!sheetName) {
+        return;
+      }
+
+
+      /*
+       * The normal apiRequest cache prevents
+       * duplicate requests, so this can safely
+       * run in the background.
+       */
+
+      apiRequest(
+        "products",
+        sheetName
+      )
+        .catch(
+          function(error) {
+
+            console.warn(
+              "Background prefetch failed:",
+              sheetName,
+              error
+            );
+
+          }
+        );
+
+    }
+
+
+    /* =========================
+       PREFETCH NEXT DROP
+       ========================= */
+
+    function prefetchNextDrop() {
+
+      if (
+        !dropSheets ||
+        dropSheets.length === 0
+      ) {
+
+        return;
+
+      }
+
+
+      const today =
+        new Date();
+
+
+      today.setHours(
+        0,
+        0,
+        0,
+        0
+      );
+
+
+      const upcoming =
+        dropSheets
+
+          .map(
+            function(sheet) {
+
+              if (
+                !sheet ||
+                !sheet.name
+              ) {
+
+                return null;
+
+              }
+
+
+              const date =
+                parseSheetDate(
+                  sheet.name
+                );
+
+
+              if (!date) {
+
+                return null;
+
+              }
+
+
+              date.setHours(
+                0,
+                0,
+                0,
+                0
+              );
+
+
+              return {
+                name: sheet.name,
+                date: date
+              };
+
+            }
+          )
+
+          .filter(
+            function(item) {
+
+              return (
+                item &&
+                item.date >= today
+              );
+
+            }
+          )
+
+          .sort(
+            function(a, b) {
+
+              return (
+                a.date.getTime() -
+                b.date.getTime()
+              );
+
+            }
+          );
+
+
+      if (
+        upcoming.length > 0
+      ) {
+
+        /*
+         * Wait until the browser is idle before
+         * using bandwidth for the background request.
+         */
+
+        if (
+          "requestIdleCallback" in window
+        ) {
+
+          window.requestIdleCallback(
+            function() {
+
+              prefetchDrop(
+                upcoming[0].name
+              );
+
+            },
+            {
+              timeout: 2500
+            }
+          );
+
+        } else {
+
+          setTimeout(
+            function() {
+
+              prefetchDrop(
+                upcoming[0].name
+              );
+
+            },
+            1200
+          );
+
+        }
+
+      }
+
+    }
+
+
+    /* =========================
        GLOBAL DATA
        ========================= */
 
@@ -2340,8 +2585,8 @@
 
         /*
          * Only load the sheet list here.
-         * The homepage does NOT load any
-         * product data.
+         * The homepage does NOT immediately
+         * load every product list.
          */
 
         loadDropSheets();
@@ -2370,6 +2615,13 @@
             buildCalendarDropMap();
 
             renderCalendar();
+
+            /*
+             * Once the sheet list is known,
+             * quietly preload the next upcoming drop.
+             */
+
+            prefetchNextDrop();
 
           }
         )
@@ -2721,6 +2973,8 @@
               data-drop="${escapeAttribute(dropName)}"
               title="View ${escapeAttribute(dropName)}"
               onclick="openCalendarDropFromButton(this, event)"
+              onmouseenter="prefetchDropFromButton(this)"
+              ontouchstart="prefetchDropFromButton(this)"
             >
               ${day}
             </button>
@@ -2769,6 +3023,37 @@
         );
 
       }
+
+    }
+
+
+    /* =========================
+       PREFETCH CALENDAR BUTTON
+       ========================= */
+
+    function prefetchDropFromButton(
+      button
+    ) {
+
+      if (!button) {
+        return;
+      }
+
+
+      const sheetName =
+        button.getAttribute(
+          "data-drop"
+        );
+
+
+      if (!sheetName) {
+        return;
+      }
+
+
+      prefetchDrop(
+        sheetName
+      );
 
     }
 
@@ -3478,6 +3763,8 @@
                   class="drop-date-row"
                   data-drop="${escapeAttribute(item.name)}"
                   onclick="openDateListDrop(this, event)"
+                  onmouseenter="prefetchDropFromButton(this)"
+                  ontouchstart="prefetchDropFromButton(this)"
                 >
 
                   <span class="drop-date-main">
@@ -3581,14 +3868,25 @@
 
         <div id="dropContent">
 
-          <div class="loading">
-            Loading products...
+          <div class="drop-loading">
+
+            <div class="loading-card"></div>
+            <div class="loading-card"></div>
+            <div class="loading-card"></div>
+            <div class="loading-card"></div>
+
           </div>
 
         </div>
 
       `;
 
+
+      /*
+       * If the user hovered the date first,
+       * this request may already be complete.
+       * If not, it starts normally here.
+       */
 
       apiRequest(
         "products",
@@ -3762,6 +4060,31 @@
           )
           .join("");
 
+
+      /*
+       * After the HTML exists, make the first few
+       * product images start immediately.
+       */
+
+      const images =
+        container.querySelectorAll(
+          ".product-image img"
+        );
+
+
+      images.forEach(
+        function(image, index) {
+
+          if (index < 6) {
+
+            image.loading =
+              "eager";
+
+          }
+
+        }
+      );
+
     }
 
 
@@ -3770,7 +4093,8 @@
        ========================= */
 
     function renderProductCard(
-      product
+      product,
+      index
     ) {
 
       let imageHtml = "";
@@ -3778,12 +4102,18 @@
 
       if (product.image) {
 
+        const loadingMode =
+          index < 6
+            ? "eager"
+            : "lazy";
+
+
         imageHtml = `
 
           <img
             src="${escapeAttribute(product.image)}"
             alt="${escapeAttribute(product.bagName || "")}"
-            loading="lazy"
+            loading="${loadingMode}"
             decoding="async"
           >
 
